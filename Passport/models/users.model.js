@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-
+const bcrypt = require('bcryptjs')
 const userSchema = mongoose.Schema({
     email : {
         type: String,
@@ -16,15 +16,30 @@ const userSchema = mongoose.Schema({
     }
 })
 
-userSchema.methods.comparePassword = function(plainpassword,cb){
-    // plain : client, this.password => db에 있는 비번
-    if(plainpassword === this.password){
-        cb(null,true)
+const saltRounds = 10
+userSchema.pre('save', function(next){
+    let user = this
+    if(user.isModified('password')){
+        // salt 생성
+        bcrypt.genSalt(saltRounds,function(err,salt){
+            if(err) return next(err)
+
+            bcrypt.hash(user.password, salt, function(err,hash){
+                if(err) return next(err)
+                user.password = hash
+                next()
+            })
+        })
     }
-    else{
-        cb(null,false)
-    }
-    return cb({error:'error'})
+})
+
+userSchema.methods.comparePassword = function(plainPassword,cb){
+    // bcrypt compare 비교
+    // plain password => client, this.password => db에 있는 비번
+    bcrypt.compare(plainPassword, this.password, function(err,isMatch){
+        if(err) return cb(err)
+        cb(null,isMatch)
+    })
 }
 
 const User = mongoose.model('User',userSchema)
