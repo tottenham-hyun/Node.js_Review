@@ -5,6 +5,7 @@ const {User} = require('./models/users.model.js')
 const passport = require('passport')
 const { nextTick } = require('process')
 const cookieSession = require('cookie-session')
+const { checkAuth, checkNotAuth } = require('./config/auth.js')
 const app = express()
 const port = 4000
 const cookieEncryptionkey = 'supersecret-key'
@@ -48,11 +49,11 @@ mongoose.connect(`mongodb+srv://admin:1234@cluster0.paftxqv.mongodb.net/`)
         console.log(err)
     })
 
-app.get('/login',(req,res)=>{
+app.get('/login',checkNotAuth,(req,res)=>{
     res.render('login')
 })
 
-app.get('/signup',(req,res)=>{
+app.get('/signup',checkNotAuth,(req,res)=>{
     res.render('signup')
 })
 
@@ -84,7 +85,7 @@ app.post('/login',(req,res,next)=>{
 }) 
 
 
-app.get('/',(req,res)=>{
+app.get('/',checkAuth,(req,res)=>{
     res.render('index')
 })
 
