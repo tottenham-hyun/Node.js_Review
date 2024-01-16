@@ -3,21 +3,18 @@ const path = require('path')
 const { default: mongoose } = require('mongoose')
 const {User} = require('./models/users.model.js')
 const passport = require('passport')
-const { nextTick } = require('process')
 const cookieSession = require('cookie-session')
-const { checkAuth, checkNotAuth } = require('./config/auth.js')
+const { checkAuth, checkNotAuth } = require('./configure/auth.js')
 const app = express()
-const port = 4000
-const cookieEncryptionkey = 'supersecret-key'
 
-
-require('./config/passport')
+require('./configure/passport')
+require('dotenv').config()
 
 app.use(express.json())
 app.use(express.urlencoded({extended:false}))
 app.use('/static', express.static(path.join(__dirname,'public')))
 app.use(cookieSession({
-    keys: [cookieEncryptionkey]
+    keys: [process.env.COOKIE_ENCRYPTION_KEY]
 }))
 // register regenerate & save after the cookieSession middleware initialization
 app.use(function(request, response, next) {
@@ -41,7 +38,7 @@ app.use(passport.session())
 app.set('views', path.join(__dirname,'views'))
 app.set('view engine','ejs')
 
-mongoose.connect(`mongodb+srv://admin:1234@cluster0.paftxqv.mongodb.net/`)
+mongoose.connect(process.env.MONGO_URI)
     .then(()=>{
         console.log('mongodb connected')
     })
@@ -94,6 +91,16 @@ app.post('/logout',(req,res,next)=>{
 app.get('/',checkAuth,(req,res)=>{
     res.render('index')
 })
+
+app.get('/auth/google', passport.authenticate('google'))
+app.get('/auth/google/callback',passport.authenticate('google', {
+    successReturnToOrRedirect : '/',
+    failureRedirect : '/login'
+}))
+
+const config = require('config')
+const serverConfig = config.get('server')
+const port = serverConfig.port
 
 app.listen(port,()=>{
     console.log('listen')
