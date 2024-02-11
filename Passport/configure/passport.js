@@ -1,6 +1,7 @@
 const passport = require('passport')
 const { User } = require('../models/users.model')
 const LocalStrategy = require('passport-local').Strategy
+const KakaoStrategy = require('passport-kakao').Strategy
 const GoogleStrategy = require('passport-google-oauth20').Strategy
 require('dotenv').config()
 // req.login(user)
@@ -75,3 +76,36 @@ const googleStrategyConfig = new GoogleStrategy({
 })
 
 passport.use('google',googleStrategyConfig)
+
+// 카카오 전략
+const kakaoStrategyConfig = new KakaoStrategy({
+    clientID: process.env.KAKAO_CLIENT_ID,
+    callbackURL: '/auth/kakao/callback',
+},(accessToken, refreshToken, profile, done)=>{
+    User.findOne({
+        kakaoId: profile.id
+    })
+    .then((existingUser)=>{
+        if(existingUser){
+            return done(null,existingUser)
+        }
+        else{
+            const user = new User()
+            user.kakaoId = profile.id
+            user.email = profile._json.kakao_account.email
+            
+            user.save().then(()=>{
+                done(null,user)
+            })
+            .catch(err =>{
+                console.log(err)
+                return done(err)
+            })
+        }
+    })
+    .catch((err)=>{
+        if(err) return done(err)
+    })
+})
+
+passport.use('kakao',kakaoStrategyConfig)
