@@ -4,8 +4,13 @@ const { default: mongoose } = require('mongoose')
 const {User} = require('./models/users.model.js')
 const passport = require('passport')
 const cookieSession = require('cookie-session')
-const { checkAuth, checkNotAuth } = require('./configure/auth.js')
 const app = express()
+
+const config = require('config')
+const mainRouter = require('./Routes/main.router.js')
+const usersRouter = require('./Routes/users.router.js')
+const serverConfig = config.get('server')
+const port = serverConfig.port
 
 require('./configure/passport')
 require('dotenv').config()
@@ -32,7 +37,8 @@ app.use(function(request, response, next) {
 })
 app.use(passport.initialize())
 app.use(passport.session())
-
+app.use('/',mainRouter)
+app.use('/auth',usersRouter)
 
 // view engine setup
 app.set('views', path.join(__dirname,'views'))
@@ -46,61 +52,10 @@ mongoose.connect(process.env.MONGO_URI)
         console.log(err)
     })
 
-app.get('/login',checkNotAuth,(req,res)=>{
-    res.render('login')
-})
 
-app.get('/signup',checkNotAuth,(req,res)=>{
-    res.render('signup')
-})
 
-app.post('/signup',async (req,res)=>{
-    const user = new User(req.body)
-    try{
-        await user.save()
-        return res.status(200).json({
-            success : true
-        })
-    }
-    catch(err){
-        console.error(err)
-    }
-})
 
-app.post('/login',(req,res,next)=>{
-    passport.authenticate('local',(err,user,info)=>{
-        
-        if(err) return next(err)
 
-        if(!user) return res.json({msg:info})
-
-        req.logIn(user,function(err){
-            if(err) return next(err)
-            res.redirect('/')
-        })
-    })(req,res,next)
-}) 
-
-app.post('/logout',(req,res,next)=>{
-    req.logOut((err)=>{
-        if(err) return next(err)
-        res.redirect('/login')
-    })
-})
-
-app.get('/',checkAuth,(req,res)=>{
-    res.render('index')
-})
-
-app.get('/auth/google', passport.authenticate('google'))
-app.get('/auth/google/callback',passport.authenticate('google', {
-    successReturnToOrRedirect : '/',
-    failureRedirect : '/login'
-}))
-
-const config = require('config')
-const serverConfig = config.get('server')
-const port = serverConfig.port
 
 app.listen(port,()=>{
     console.log('listen')
